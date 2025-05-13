@@ -5,3 +5,7 @@ FROM NOTE_AUTO_S204;
 --Obtenir la note et les commentaires de l'auto-évaluation S204
 SELECT *
 FROM NOTE_AUTO_S204;
+
+--Obtenir le nombre de commentaires "OK"
+SELECT COUNT(CASE WHEN commentaire = 'OK' THEN 1 END) || '/' || COUNT(*) AS resultat
+FROM note_auto_s204;
