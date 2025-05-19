@@ -1,0 +1,36 @@
+SELECT *
+FROM note_auto_s204;
+
+SELECT COUNT(CASE WHEN commentaire = 'OK' THEN 1 END) || '/' || COUNT(*) AS resultat
+FROM note_auto_s204;
+
+SELECT TO_CHAR(SUM(note)) || '/20' AS note
+FROM NOTE_AUTO_S204;
+
+GRANT SELECT, INSERT, UPDATE, DELETE, ON SORTIES_RECENTES TO gestionJV;
+
+GRANT SELECT, ON SORTIES_RECENTES TO analyseJV;
+
+CREATE TABLE LOG (
+    idLog NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    idAuteur VARCHAR2(50) NOT NULL,
+    action VARCHAR2(20) NOT NULL,
+    dateHeureAction TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    idEnregistrement VARCHAR2(100) NOT NULL,
+    colonneMaj VARCHAR2(100),
+    valeurAvant VARCHAR2(4000),
+    valeurApres VARCHAR2(4000),
+    nomTable VARCHAR2(50) NOT NULL
+);
+
+DROP TABLE LOG;
+
+BEGIN
+  FOR t IN (
+    SELECT trigger_name
+    FROM user_triggers
+  ) LOOP
+    EXECUTE IMMEDIATE 'DROP TRIGGER "' || t.trigger_name || '"';
+  END LOOP;
+END;
+/
