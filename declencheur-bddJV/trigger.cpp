@@ -10,52 +10,75 @@ struct Table {
 };
 
 void writeTrigger(std::ofstream& file, const Table& table, const std::string& action) {
-    std::string triggerName = "declencheur_" + table.name + "_" + action;
+    std::string triggerName = "trig_" + table.name + "_" + action;
     std::string timing = "AFTER " + action;
-    std::string ref = (action == "INSERT") ? ":NEW" : ":OLD";
-    std::string newRef = ":NEW";
-    std::string oldRef = ":OLD";
-
-    std::string ligneAvant = "NULL";
-    std::string ligneApres = "NULL";
-
-    if (action == "INSERT") {
-        ligneApres = "";
-        for (const auto& col : table.columns) {
-            ligneApres += newRef + "." + col + " || ' || ' || ";
-        }
-        ligneApres = ligneApres.substr(0, ligneApres.size() - 12); // retirer le dernier " || ' | ' || "
-    } else if (action == "DELETE") {
-        ligneAvant = "";
-        for (const auto& col : table.columns) {
-            ligneAvant += oldRef + "." + col + " || ' || ' || ";
-        }
-        ligneAvant = ligneAvant.substr(0, ligneAvant.size() - 12);
-    } else if (action == "UPDATE") {
-        ligneAvant = "";
-        ligneApres = "";
-        for (const auto& col : table.columns) {
-            ligneAvant += oldRef + "." + col + " || ' || ' || ";
-            ligneApres += newRef + "." + col + " || ' || ' || ";
-        }
-        ligneAvant = ligneAvant.substr(0, ligneAvant.size() - 12);
-        ligneApres = ligneApres.substr(0, ligneApres.size() - 12);
-    }
-
+    
     file << "CREATE OR REPLACE TRIGGER " << triggerName << "\n";
     file << timing << " ON " << table.name << "\n";
     file << "FOR EACH ROW\n";
-    file << "BEGIN\n";
-    file << "  INSERT INTO LOG(idAuteur, action, dateHeureAction, idEnregistrement, colonneMaj, valeurAvant, valeurApres, nomTable)\n";
-    file << "  VALUES(user, '" << action << "', SYSTIMESTAMP, ";
-    file << ((action == "INSERT") ? ":NEW." : ":OLD.") << table.idColumn << ", NULL, ";
-    file << ((ligneAvant == "NULL") ? "NULL" : "'" + ligneAvant + "'") << ", ";
-    file << ((ligneApres == "NULL") ? "NULL" : "'" + ligneApres + "'") << ", '" << table.name << "');\n";
-    file << "END;\n/\n\n";
+    
+    if (action == "INSERT") {
+        file << "DECLARE\n";
+        file << "    val_apres VARCHAR2(4000);\n";
+        file << "BEGIN\n";
+        // construire la valeur apres
+        file << "    val_apres := ";
+        for (size_t i = 0; i < table.columns.size(); i++) {
+            if (i > 0) file << " || ' | ' || ";
+            file << ":NEW." << table.columns[i];
+        }
+        file << ";\n";
+        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, idEnregistrement, colonneMaj, valeurAvant, valeurApres, nomTable)\n";
+        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, :NEW." << table.idColumn << ", NULL, NULL, val_apres, '" << table.name << "');\n";
+        file << "END;\n";
+    }
+    else if (action == "DELETE") {
+        file << "DECLARE\n";
+        file << "    val_avant VARCHAR2(4000);\n";
+        file << "BEGIN\n";
+        // construire la valeur avant
+        file << "    val_avant := ";
+        for (size_t i = 0; i < table.columns.size(); i++) {
+            if (i > 0) file << " || ' | ' || ";
+            file << ":OLD." << table.columns[i];
+        }
+        file << ";\n";
+        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, idEnregistrement, colonneMaj, valeurAvant, valeurApres, nomTable)\n";
+        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, :OLD." << table.idColumn << ", NULL, val_avant, NULL, '" << table.name << "');\n";
+        file << "END;\n";
+    }
+    else if (action == "UPDATE") {
+        file << "DECLARE\n";
+        file << "    val_avant VARCHAR2(4000);\n";
+        file << "    val_apres VARCHAR2(4000);\n";
+        file << "BEGIN\n";
+        // construire les valeurs avant et apres
+        file << "    val_avant := ";
+        for (size_t i = 0; i < table.columns.size(); i++) {
+            if (i > 0) file << " || ' | ' || ";
+            file << ":OLD." << table.columns[i];
+        }
+        file << ";\n";
+        file << "    val_apres := ";
+        for (size_t i = 0; i < table.columns.size(); i++) {
+            if (i > 0) file << " || ' | ' || ";
+            file << ":NEW." << table.columns[i];
+        }
+        file << ";\n";
+        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, idEnregistrement, colonneMaj, valeurAvant, valeurApres, nomTable)\n";
+        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, :OLD." << table.idColumn << ", NULL, val_avant, val_apres, '" << table.name << "');\n";
+        file << "END;\n";
+    }
+    
+    file << "/\n\n";
 }
 
 int main() {
-    std::ofstream file("triggers.sql");
+    std::ofstream file("triggers_corriges.sql");
+    
+    // ajouter un header
+    file << "-- Triggers generes automatiquement pour la BDD jeux video\n";
+    file << "-- Pour vider la table LOG: DELETE FROM LOG; ou TRUNCATE TABLE LOG;\n\n";
 
     std::vector<Table> tables = {
         {"CATEGORIEJEU", "IdCategorieJeu", {"IdCategorieJeu", "NomCategoriejeu"}},
@@ -90,6 +113,7 @@ int main() {
         {"LOCALISATIONJEU", "IdJeu", {"IdJeu", "IdRegion", "TitreLocalise"}},
     };
 
+    // generer les triggers
     for (const auto& table : tables) {
         writeTrigger(file, table, "INSERT");
         writeTrigger(file, table, "UPDATE");
@@ -97,6 +121,7 @@ int main() {
     }
 
     file.close();
-    std::cout << "Fichier 'triggers.sql' généré avec succès.\n";
+    std::cout << "Fichier 'triggers_corriges.sql' genere avec succes!\n";
+    std::cout << "Pour vider la table LOG, utilisez: DELETE FROM LOG; ou TRUNCATE TABLE LOG;\n";
     return 0;
 }
