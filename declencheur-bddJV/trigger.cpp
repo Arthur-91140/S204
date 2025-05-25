@@ -21,7 +21,7 @@ void writeTrigger(std::ofstream& file, const Table& table, const std::string& ac
         file << "    INSERT INTO LOG(idAuteur, action, idEnregistrement, valeurAvant, valeurApres, nomTable)\n";
         file << "    VALUES(USER, 'INSERT', :NEW." << table.idColumn << ", NULL, '";
         for (size_t i = 0; i < table.columns.size(); i++) {
-            if (i > 0) file << "|';
+            if (i > 0) file << "|";
             file << "' || :NEW." << table.columns[i] << " || '";
         }
         file << "', '" << table.name << "');\n";
