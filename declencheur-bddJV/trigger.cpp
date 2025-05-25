@@ -11,103 +11,52 @@ struct Table {
 
 void writeTrigger(std::ofstream& file, const Table& table, const std::string& action) {
     std::string triggerName = "trig_" + table.name + "_" + action;
-    std::string timing = "AFTER " + action;
     
     file << "CREATE OR REPLACE TRIGGER " << triggerName << "\n";
-    file << timing << " ON " << table.name << "\n";
+    file << "AFTER " << action << " ON " << table.name << "\n";
     file << "FOR EACH ROW\n";
+    file << "BEGIN\n";
     
     if (action == "INSERT") {
-        file << "DECLARE\n";
-        file << "    ligne_apres VARCHAR2(4000);\n";
-        file << "BEGIN\n";
-        // Construire la valeur après avec gestion des NULL
-        file << "    ligne_apres := ";
-        for (size_t i = 0; i < table.columns.size(); i++) {
-            if (i > 0) file << " || ' | ' || ";
-            file << "NVL(TO_CHAR(:NEW." << table.columns[i] << "), 'NULL')";
-        }
-        file << ";\n";
         file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
-        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, NULL, ligne_apres);\n";
-        file << "END;\n";
+        file << "    VALUES(USER, 'INSERT', SYSTIMESTAMP, NULL, '";
+        for (size_t i = 0; i < table.columns.size(); i++) {
+            if (i > 0) file << "|";
+            file << "' || :NEW." << table.columns[i] << " || '";
+        }
+        file << "');\n";
     }
     else if (action == "DELETE") {
-        file << "DECLARE\n";
-        file << "    ligne_avant VARCHAR2(4000);\n";
-        file << "BEGIN\n";
-        // Construire la valeur avant avec gestion des NULL
-        file << "    ligne_avant := ";
-        for (size_t i = 0; i < table.columns.size(); i++) {
-            if (i > 0) file << " || ' | ' || ";
-            file << "NVL(TO_CHAR(:OLD." << table.columns[i] << "), 'NULL')";
-        }
-        file << ";\n";
         file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
-        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, ligne_avant, NULL);\n";
-        file << "END;\n";
+        file << "    VALUES(USER, 'DELETE', SYSTIMESTAMP, '";
+        for (size_t i = 0; i < table.columns.size(); i++) {
+            if (i > 0) file << "|";
+            file << "' || :OLD." << table.columns[i] << " || '";
+        }
+        file << "', NULL);\n";
     }
     else if (action == "UPDATE") {
-        file << "DECLARE\n";
-        file << "    ligne_avant VARCHAR2(4000);\n";
-        file << "    ligne_apres VARCHAR2(4000);\n";
-        file << "    modifications_detectees BOOLEAN := FALSE;\n";
-        file << "BEGIN\n";
-        
-        // Vérifier s'il y a vraiment des modifications
-        file << "    -- Vérifier les modifications colonne par colonne\n";
+        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
+        file << "    VALUES(USER, 'UPDATE', SYSTIMESTAMP, '";
         for (size_t i = 0; i < table.columns.size(); i++) {
-            file << "    IF (NVL(:OLD." << table.columns[i] << ", 'NULL_VALUE') != NVL(:NEW." 
-                 << table.columns[i] << ", 'NULL_VALUE')) THEN\n";
-            file << "        modifications_detectees := TRUE;\n";
-            file << "    END IF;\n";
+            if (i > 0) file << "|";
+            file << "' || :OLD." << table.columns[i] << " || '";
         }
-        
-        file << "    \n";
-        file << "    -- Seulement logger s'il y a des modifications réelles\n";
-        file << "    IF modifications_detectees THEN\n";
-        
-        // Construire les valeurs avant et après avec gestion des NULL
-        file << "        ligne_avant := ";
+        file << "', '";
         for (size_t i = 0; i < table.columns.size(); i++) {
-            if (i > 0) file << " || ' | ' || ";
-            file << "NVL(TO_CHAR(:OLD." << table.columns[i] << "), 'NULL')";
+            if (i > 0) file << "|";
+            file << "' || :NEW." << table.columns[i] << " || '";
         }
-        file << ";\n";
-        file << "        ligne_apres := ";
-        for (size_t i = 0; i < table.columns.size(); i++) {
-            if (i > 0) file << " || ' | ' || ";
-            file << "NVL(TO_CHAR(:NEW." << table.columns[i] << "), 'NULL')";
-        }
-        file << ";\n";
-        file << "        \n";
-        file << "        INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
-        file << "        VALUES(USER, '" << action << "', SYSTIMESTAMP, ligne_avant, ligne_apres);\n";
-        file << "    END IF;\n";
-        file << "END;\n";
+        file << "');\n";
     }
     
-    file << "/\n\n";
+    file << "END;\n/\n\n";
 }
 
 int main() {
     std::ofstream file("triggers_corriges.sql");
     
-    // Ajouter un header avec la création de la table LOG
-    file << "-- Triggers générés automatiquement pour la BDD jeux vidéo\n";
-    file << "-- Table LOG pour enregistrer les modifications\n\n";
-    
-    file << "-- Création de la table LOG si elle n'existe pas\n";
-    file << "CREATE TABLE LOG (\n";
-    file << "    idLog NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n";
-    file << "    idAuteur VARCHAR2(128) NOT NULL,\n";
-    file << "    action VARCHAR2(20) NOT NULL,\n";
-    file << "    dateHeureAction TIMESTAMP NOT NULL,\n";
-    file << "    ligneAvant VARCHAR2(4000),\n";
-    file << "    ligneApres VARCHAR2(4000)\n";
-    file << ");\n\n";
-    
-    file << "-- Pour vider la table LOG: DELETE FROM LOG; ou TRUNCATE TABLE LOG;\n\n";
+    file << "-- Triggers pour log automatique\n\n";
 
     std::vector<Table> tables = {
         {"CATEGORIEJEU", "IdCategorieJeu", {"IdCategorieJeu", "NomCategoriejeu"}},
@@ -142,17 +91,13 @@ int main() {
         {"LOCALISATIONJEU", "IdJeu", {"IdJeu", "IdRegion", "TitreLocalise"}},
     };
 
-    // Générer les triggers
     for (const auto& table : tables) {
-        file << "-- Triggers pour la table " << table.name << "\n";
         writeTrigger(file, table, "INSERT");
         writeTrigger(file, table, "UPDATE");
         writeTrigger(file, table, "DELETE");
-        file << "\n";
     }
 
     file.close();
-    std::cout << "Fichier 'triggers_corriges.sql' généré avec succès!\n";
-    std::cout << "Pour vider la table LOG, utilisez: DELETE FROM LOG; ou TRUNCATE TABLE LOG;\n";
+    std::cout << "Fichier généré!\n";
     return 0;
 }
