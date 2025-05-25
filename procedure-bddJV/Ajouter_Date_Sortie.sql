@@ -1,53 +1,46 @@
 create or replace PROCEDURE AJOUTER_DATE_SORTIE(
-    p_idJeu IN NUMBER,
-    p_idPlateforme IN NUMBER,
-    p_dateSortie IN DATE,
-    p_regionSortie IN VARCHAR2,
-    p_statut IN VARCHAR2
+    jeu_id IN NUMBER,
+    plat_id IN NUMBER,
+    date_release IN DATE,
+    zone IN VARCHAR2,
+    etat IN VARCHAR2
 ) AS
-    v_count NUMBER;
-    v_newId NUMBER;
+    compteur NUMBER;
+    nouvel_id NUMBER;
 
 BEGIN
-    -- Vérifier que le jeu existe
-    SELECT COUNT(*) INTO v_count
-    FROM JEU
-    WHERE IdJeu = p_idJeu;
-
-    IF v_count = 0 THEN
+    -- le jeu existe ?
+    SELECT COUNT(*) INTO compteur FROM JEU WHERE IdJeu = jeu_id;
+    IF compteur = 0 THEN
         RAISE_APPLICATION_ERROR(-20001, 'Jeu inexistant');
     END IF;
 
-    -- Vérifier que la plateforme existe
-    SELECT COUNT(*) INTO v_count
-    FROM PLATEFORME
-    WHERE IdPlateforme = p_idPlateforme;
-
-    IF v_count = 0 THEN
+    -- la plateforme existe ?
+    SELECT COUNT(*) INTO compteur FROM PLATEFORME WHERE IdPlateforme = plat_id;
+    IF compteur = 0 THEN
         RAISE_APPLICATION_ERROR(-20002, 'Plateforme inexistante');
     END IF;
 
-    -- Vérifier que la région est valide
-    IF p_regionSortie NOT IN ('north_america', 'europe', 'japan', 'worldwide', 'australia', 'brazil', 'new_zealand', 'asia', 'china', 'korea') THEN
+    -- region ok ?
+    IF zone NOT IN ('north_america', 'europe', 'japan', 'worldwide', 'australia', 'brazil', 'new_zealand', 'asia', 'china', 'korea') THEN
         RAISE_APPLICATION_ERROR(-20003, 'Région inconnue');
     END IF;
 
-    -- Vérifier qu'il n'y a pas déjà une sortie pour cette combinaison
-    SELECT COUNT(*) INTO v_count
-    FROM DATESORTIE
-    WHERE IdJeu = p_idJeu 
-      AND IdPlateforme = p_idPlateforme 
-      AND RegionSortie = p_regionSortie;
+    -- pas de doublon
+    SELECT COUNT(*) INTO compteur 
+    FROM DATESORTIE 
+    WHERE IdJeu = jeu_id 
+      AND IdPlateforme = plat_id 
+      AND RegionSortie = zone;
 
-    IF v_count > 0 THEN
+    IF compteur > 0 THEN
         RAISE_APPLICATION_ERROR(-20004, 'Sortie déjà enregistrée');
     END IF;
 
-    -- Calculer le nouvel ID
-    SELECT NVL(MAX(IdDateSortie), 0) + 1 INTO v_newId
-    FROM DATESORTIE;
+    -- prochain id
+    SELECT NVL(MAX(IdDateSortie), 0) + 1 INTO nouvel_id FROM DATESORTIE;
 
-    -- Insérer la nouvelle date de sortie
+    -- on ajoute la nouvelle date
     INSERT INTO DATESORTIE (
         IdDateSortie,
         IdJeu,
@@ -57,12 +50,12 @@ BEGIN
         StatutSortie,
         DateMAJDateSortie
     ) VALUES (
-        v_newId,
-        p_idJeu,
-        p_idPlateforme,
-        p_dateSortie,
-        p_regionSortie,
-        p_statut,
+        nouvel_id,
+        jeu_id,
+        plat_id,
+        date_release,
+        zone,
+        etat,
         SYSDATE
     );
 
