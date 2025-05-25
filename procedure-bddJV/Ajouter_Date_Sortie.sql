@@ -28,9 +28,7 @@ BEGIN
     END IF;
 
     -- Vérifier que la région est valide
-    IF p_regionSortie NOT IN ('north_america', 'europe', 'japan', 'worldwide', 
-                              'australia', 'brazil', 'new_zealand', 'asia', 
-                              'china', 'korea') THEN
+    IF p_regionSortie NOT IN ('north_america', 'europe', 'japan', 'worldwide', 'australia', 'brazil', 'new_zealand', 'asia', 'china', 'korea') THEN
         RAISE_APPLICATION_ERROR(-20003, 'Région inconnue');
     END IF;
 
