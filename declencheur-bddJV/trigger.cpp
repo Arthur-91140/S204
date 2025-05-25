@@ -19,54 +19,71 @@ void writeTrigger(std::ofstream& file, const Table& table, const std::string& ac
     
     if (action == "INSERT") {
         file << "DECLARE\n";
-        file << "    val_apres VARCHAR2(4000);\n";
+        file << "    ligne_apres VARCHAR2(4000);\n";
         file << "BEGIN\n";
-        // construire la valeur apres
-        file << "    val_apres := ";
+        // Construire la valeur après avec gestion des NULL
+        file << "    ligne_apres := ";
         for (size_t i = 0; i < table.columns.size(); i++) {
             if (i > 0) file << " || ' | ' || ";
-            file << ":NEW." << table.columns[i];
+            file << "NVL(TO_CHAR(:NEW." << table.columns[i] << "), 'NULL')";
         }
         file << ";\n";
-        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, idEnregistrement, colonneMaj, valeurAvant, valeurApres, nomTable)\n";
-        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, :NEW." << table.idColumn << ", NULL, NULL, val_apres, '" << table.name << "');\n";
+        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
+        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, NULL, ligne_apres);\n";
         file << "END;\n";
     }
     else if (action == "DELETE") {
         file << "DECLARE\n";
-        file << "    val_avant VARCHAR2(4000);\n";
+        file << "    ligne_avant VARCHAR2(4000);\n";
         file << "BEGIN\n";
-        // construire la valeur avant
-        file << "    val_avant := ";
+        // Construire la valeur avant avec gestion des NULL
+        file << "    ligne_avant := ";
         for (size_t i = 0; i < table.columns.size(); i++) {
             if (i > 0) file << " || ' | ' || ";
-            file << ":OLD." << table.columns[i];
+            file << "NVL(TO_CHAR(:OLD." << table.columns[i] << "), 'NULL')";
         }
         file << ";\n";
-        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, idEnregistrement, colonneMaj, valeurAvant, valeurApres, nomTable)\n";
-        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, :OLD." << table.idColumn << ", NULL, val_avant, NULL, '" << table.name << "');\n";
+        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
+        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, ligne_avant, NULL);\n";
         file << "END;\n";
     }
     else if (action == "UPDATE") {
         file << "DECLARE\n";
-        file << "    val_avant VARCHAR2(4000);\n";
-        file << "    val_apres VARCHAR2(4000);\n";
+        file << "    ligne_avant VARCHAR2(4000);\n";
+        file << "    ligne_apres VARCHAR2(4000);\n";
+        file << "    modifications_detectees BOOLEAN := FALSE;\n";
         file << "BEGIN\n";
-        // construire les valeurs avant et apres
-        file << "    val_avant := ";
+        
+        // Vérifier s'il y a vraiment des modifications
+        file << "    -- Vérifier les modifications colonne par colonne\n";
+        for (size_t i = 0; i < table.columns.size(); i++) {
+            file << "    IF (NVL(:OLD." << table.columns[i] << ", 'NULL_VALUE') != NVL(:NEW." 
+                 << table.columns[i] << ", 'NULL_VALUE')) THEN\n";
+            file << "        modifications_detectees := TRUE;\n";
+            file << "    END IF;\n";
+        }
+        
+        file << "    \n";
+        file << "    -- Seulement logger s'il y a des modifications réelles\n";
+        file << "    IF modifications_detectees THEN\n";
+        
+        // Construire les valeurs avant et après avec gestion des NULL
+        file << "        ligne_avant := ";
         for (size_t i = 0; i < table.columns.size(); i++) {
             if (i > 0) file << " || ' | ' || ";
-            file << ":OLD." << table.columns[i];
+            file << "NVL(TO_CHAR(:OLD." << table.columns[i] << "), 'NULL')";
         }
         file << ";\n";
-        file << "    val_apres := ";
+        file << "        ligne_apres := ";
         for (size_t i = 0; i < table.columns.size(); i++) {
             if (i > 0) file << " || ' | ' || ";
-            file << ":NEW." << table.columns[i];
+            file << "NVL(TO_CHAR(:NEW." << table.columns[i] << "), 'NULL')";
         }
         file << ";\n";
-        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, idEnregistrement, colonneMaj, valeurAvant, valeurApres, nomTable)\n";
-        file << "    VALUES(USER, '" << action << "', SYSTIMESTAMP, :OLD." << table.idColumn << ", NULL, val_avant, val_apres, '" << table.name << "');\n";
+        file << "        \n";
+        file << "        INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
+        file << "        VALUES(USER, '" << action << "', SYSTIMESTAMP, ligne_avant, ligne_apres);\n";
+        file << "    END IF;\n";
         file << "END;\n";
     }
     
@@ -76,8 +93,20 @@ void writeTrigger(std::ofstream& file, const Table& table, const std::string& ac
 int main() {
     std::ofstream file("triggers_corriges.sql");
     
-    // ajouter un header
-    file << "-- Triggers generes automatiquement pour la BDD jeux video\n";
+    // Ajouter un header avec la création de la table LOG
+    file << "-- Triggers générés automatiquement pour la BDD jeux vidéo\n";
+    file << "-- Table LOG pour enregistrer les modifications\n\n";
+    
+    file << "-- Création de la table LOG si elle n'existe pas\n";
+    file << "CREATE TABLE LOG (\n";
+    file << "    idLog NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n";
+    file << "    idAuteur VARCHAR2(128) NOT NULL,\n";
+    file << "    action VARCHAR2(20) NOT NULL,\n";
+    file << "    dateHeureAction TIMESTAMP NOT NULL,\n";
+    file << "    ligneAvant VARCHAR2(4000),\n";
+    file << "    ligneApres VARCHAR2(4000)\n";
+    file << ");\n\n";
+    
     file << "-- Pour vider la table LOG: DELETE FROM LOG; ou TRUNCATE TABLE LOG;\n\n";
 
     std::vector<Table> tables = {
@@ -113,15 +142,17 @@ int main() {
         {"LOCALISATIONJEU", "IdJeu", {"IdJeu", "IdRegion", "TitreLocalise"}},
     };
 
-    // generer les triggers
+    // Générer les triggers
     for (const auto& table : tables) {
+        file << "-- Triggers pour la table " << table.name << "\n";
         writeTrigger(file, table, "INSERT");
         writeTrigger(file, table, "UPDATE");
         writeTrigger(file, table, "DELETE");
+        file << "\n";
     }
 
     file.close();
-    std::cout << "Fichier 'triggers_corriges.sql' genere avec succes!\n";
+    std::cout << "Fichier 'triggers_corriges.sql' généré avec succès!\n";
     std::cout << "Pour vider la table LOG, utilisez: DELETE FROM LOG; ou TRUNCATE TABLE LOG;\n";
     return 0;
 }
