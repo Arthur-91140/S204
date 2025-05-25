@@ -18,26 +18,26 @@ void writeTrigger(std::ofstream& file, const Table& table, const std::string& ac
     file << "BEGIN\n";
     
     if (action == "INSERT") {
-        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
-        file << "    VALUES(USER, 'INSERT', SYSTIMESTAMP, NULL, '";
+        file << "    INSERT INTO LOG(idAuteur, action, idEnregistrement, valeurAvant, valeurApres, nomTable)\n";
+        file << "    VALUES(USER, 'INSERT', :NEW." << table.idColumn << ", NULL, '";
         for (size_t i = 0; i < table.columns.size(); i++) {
-            if (i > 0) file << "|";
+            if (i > 0) file << "|';
             file << "' || :NEW." << table.columns[i] << " || '";
         }
-        file << "');\n";
+        file << "', '" << table.name << "');\n";
     }
     else if (action == "DELETE") {
-        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
-        file << "    VALUES(USER, 'DELETE', SYSTIMESTAMP, '";
+        file << "    INSERT INTO LOG(idAuteur, action, idEnregistrement, valeurAvant, valeurApres, nomTable)\n";
+        file << "    VALUES(USER, 'DELETE', :OLD." << table.idColumn << ", '";
         for (size_t i = 0; i < table.columns.size(); i++) {
             if (i > 0) file << "|";
             file << "' || :OLD." << table.columns[i] << " || '";
         }
-        file << "', NULL);\n";
+        file << "', NULL, '" << table.name << "');\n";
     }
     else if (action == "UPDATE") {
-        file << "    INSERT INTO LOG(idAuteur, action, dateHeureAction, ligneAvant, ligneApres)\n";
-        file << "    VALUES(USER, 'UPDATE', SYSTIMESTAMP, '";
+        file << "    INSERT INTO LOG(idAuteur, action, idEnregistrement, valeurAvant, valeurApres, nomTable)\n";
+        file << "    VALUES(USER, 'UPDATE', :NEW." << table.idColumn << ", '";
         for (size_t i = 0; i < table.columns.size(); i++) {
             if (i > 0) file << "|";
             file << "' || :OLD." << table.columns[i] << " || '";
@@ -47,7 +47,7 @@ void writeTrigger(std::ofstream& file, const Table& table, const std::string& ac
             if (i > 0) file << "|";
             file << "' || :NEW." << table.columns[i] << " || '";
         }
-        file << "');\n";
+        file << "', '" << table.name << "');\n";
     }
     
     file << "END;\n/\n\n";
