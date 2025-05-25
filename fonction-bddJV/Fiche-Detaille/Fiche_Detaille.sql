@@ -1,19 +1,17 @@
-create or replace FUNCTION FICHE_DETAILLEE(p_id_jeu IN JEU.IdJeu%TYPE) RETURN CLOB
+create or replace FUNCTION FICHE_DETAILLEE(in_idJeu IN JEU.IdJeu%TYPE) 
+RETURN CLOB
 IS
-    v_json CLOB;
-    v_count NUMBER;
+    v_resultat CLOB;
+    v_nb NUMBER;
 BEGIN
-    -- Vérifier si le jeu existe
-    SELECT COUNT(*)
-    INTO v_count
-    FROM JEU
-    WHERE IdJeu = p_id_jeu;
+    -- verifier si le jeu existe
+    SELECT COUNT(*) INTO v_nb FROM JEU WHERE IdJeu = in_idJeu;
     
-    -- Lever l'exception si le jeu n'existe pas
-    IF v_count = 0 THEN
+    IF v_nb = 0 THEN
         RAISE_APPLICATION_ERROR(-20001, 'Jeu inexistant');
     END IF;
     
+    -- recuperer toutes les infos du jeu
     SELECT JSON_OBJECT(
         'titre' VALUE J.TitreJeu,
         'résumé' VALUE J.ResumeJeu,
@@ -21,7 +19,7 @@ BEGIN
             (SELECT JSON_ARRAYAGG(M.NomModalite RETURNING CLOB)
              FROM MODALITE M
              JOIN MODALITEJEU MJ ON MJ.idModalite = M.idModalite
-             WHERE MJ.IdJeu = p_id_jeu),
+             WHERE MJ.IdJeu = in_idJeu),
             TO_CLOB('[]')
         ) FORMAT JSON,
         'développeur(s)' VALUE COALESCE(
@@ -34,7 +32,7 @@ BEGIN
             )
             FROM COMPAGNIE C
             JOIN COMPAGNIEJEU CJ ON C.IdCompagnie = CJ.idCompagnie
-            WHERE CJ.IdJeu = p_id_jeu AND CJ.EstDeveloppeur = 1),
+            WHERE CJ.IdJeu = in_idJeu AND CJ.EstDeveloppeur = 1),
             TO_CLOB('[]')
         ) FORMAT JSON,
         'publieur(s)' VALUE COALESCE(
@@ -47,7 +45,7 @@ BEGIN
             )
             FROM COMPAGNIE C
             JOIN COMPAGNIEJEU CJ ON C.IdCompagnie = CJ.idCompagnie
-            WHERE CJ.IdJeu = p_id_jeu AND CJ.EstPublieur = 1),
+            WHERE CJ.IdJeu = in_idJeu AND CJ.EstPublieur = 1),
             TO_CLOB('[]')
         ) FORMAT JSON,
         'plateforme(s)' VALUE COALESCE(
@@ -61,7 +59,7 @@ BEGIN
             )
             FROM PLATEFORME P
             JOIN DATESORTIE DS ON DS.idPlateforme = P.idPlateforme
-            WHERE DS.IdJeu = p_id_jeu),
+            WHERE DS.IdJeu = in_idJeu),
             TO_CLOB('[]')
         ) FORMAT JSON,
         'score' VALUE J.ScoreJeu,
@@ -69,10 +67,10 @@ BEGIN
         'score critiques' VALUE J.ScoreAgregeJeu,
         'nb votes critiques' VALUE J.NombreNotesAgregeesJeu
         RETURNING CLOB
-    ) INTO v_json
+    ) INTO v_resultat
     FROM JEU J
-    WHERE J.IdJeu = p_id_jeu;
+    WHERE J.IdJeu = in_idJeu;
     
-    RETURN v_json;
+    RETURN v_resultat;
 END;
 /
