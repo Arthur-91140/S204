@@ -252,3 +252,5 @@ EXCEPTION
         RAISE;
 END AJOUTER_DATE_SORTIE;
 /
+
+select * from log;
