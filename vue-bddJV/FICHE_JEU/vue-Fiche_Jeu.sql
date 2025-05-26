@@ -4,7 +4,7 @@ SELECT
         j.TITREJEU AS titre,
         -- premiere sortie du jeu
         MIN(ds.DATESORTIE) AS premiere_date_sortie,
-        COALESCE(j.STATUTJEU, 'Publié') AS statut,
+        COALESCE(j.STATUTJEU, 'Publié') AS statut, -- premiere valeur
         -- liste des devs
         LISTAGG(DISTINCT CASE WHEN cj.ESTDEVELOPPEUR = 1 THEN c.NOMCOMPAGNIE END, ', ') 
             WITHIN GROUP (ORDER BY c.NOMCOMPAGNIE) AS developpeurs,
