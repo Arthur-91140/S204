@@ -1,8 +1,8 @@
 create or replace FUNCTION FICHE_DETAILLEE(in_idJeu IN JEU.IdJeu%TYPE) 
 RETURN CLOB
 IS
-    fiche-js CLOB;
-    Jnb NUMBER;
+fiche-js CLOB;
+Jnb NUMBER;
 BEGIN
     -- verifier si le jeu existe
     SELECT COUNT(*) INTO Jnb FROM JEU WHERE IdJeu = in_idJeu;
