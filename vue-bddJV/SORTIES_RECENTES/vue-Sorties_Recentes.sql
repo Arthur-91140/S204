@@ -1,7 +1,4 @@
-SELECT 
-J.idJeu, 
-J.titreJeu, 
-DS.datesortie, 
+SELECT J.idJeu, J.titreJeu, DS.datesortie, 
 -- toutes les plateformes
 LISTAGG(DISTINCT P.nomplateforme, ', ') WITHIN GROUP (ORDER BY P.nomplateforme) AS plateforme
 FROM jeu J
