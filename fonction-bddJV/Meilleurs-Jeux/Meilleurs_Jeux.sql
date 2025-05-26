@@ -12,7 +12,7 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20002, 'Plateforme inexistante');
     END IF;
     
-    -- debut du json
+    -- debut du json chr 10 pour les sauts de ligne
     sortie := '{' || CHR(10) || '"jeux":[' || CHR(10);
     
     -- top 100 des jeux
