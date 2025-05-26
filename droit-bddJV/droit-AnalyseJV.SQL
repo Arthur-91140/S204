@@ -3,9 +3,9 @@ SET SERVEROUTPUT ON;
 
 --Ajout de la permition de consultation à AnalyseJV
 BEGIN
-  FOR ma_table IN (SELECT table_name FROM user_tables) LOOP
-    DBMS_OUTPUT.PUT_LINE(ma_table.table_name);
-    EXECUTE IMMEDIATE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ' || ma_table.table_name || ' TO GestionJV';
+  FOR TableJV IN (SELECT table_name FROM user_tables) LOOP
+    DBMS_OUTPUT.PUT_LINE(TableJV.table_name);
+    EXECUTE IMMEDIATE 'GRANT SELECT ON ' || TableJV.table_name || ' TO AnalyseJV';
   END LOOP;
 END;
 /
