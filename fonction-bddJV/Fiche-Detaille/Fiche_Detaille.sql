@@ -1,13 +1,13 @@
 create or replace FUNCTION FICHE_DETAILLEE(in_idJeu IN JEU.IdJeu%TYPE) 
 RETURN CLOB
 IS
-    v_resultat CLOB;
-    v_nb NUMBER;
+    fiche-js CLOB;
+    Jnb NUMBER;
 BEGIN
     -- verifier si le jeu existe
-    SELECT COUNT(*) INTO v_nb FROM JEU WHERE IdJeu = in_idJeu;
+    SELECT COUNT(*) INTO Jnb FROM JEU WHERE IdJeu = in_idJeu;
     
-    IF v_nb = 0 THEN
+    IF Jnb = 0 THEN
         RAISE_APPLICATION_ERROR(-20001, 'Jeu inexistant');
     END IF;
     
@@ -67,10 +67,10 @@ BEGIN
         'score critiques' VALUE J.ScoreAgregeJeu,
         'nb votes critiques' VALUE J.NombreNotesAgregeesJeu
         RETURNING CLOB
-    ) INTO v_resultat
+    ) INTO fiche-js
     FROM JEU J
     WHERE J.IdJeu = in_idJeu;
     
-    RETURN v_resultat;
+    RETURN fiche-js;
 END;
 /
